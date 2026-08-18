@@ -62,6 +62,31 @@ data "aws_iam_policy_document" "github_kubernetes_cd_assume_role" {
       values   = [var.github_kubernetes_cd_subject]
     }
   }
+
+  statement {
+    sid     = "AllowApplicationReleaseTags"
+    effect  = "Allow"
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type = "Federated"
+      identifiers = [
+        aws_iam_openid_connect_provider.github_actions.arn,
+      ]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringLike"
+      variable = "token.actions.githubusercontent.com:sub"
+      values   = [var.github_application_release_subject]
+    }
+  }
 }
 
 resource "aws_iam_role" "github_kubernetes_cd" {

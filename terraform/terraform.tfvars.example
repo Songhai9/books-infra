@@ -17,3 +17,6 @@ kubernetes_gateway_http_node_port       = 30080
 
 # Immutable OIDC subject for Songhai9/books-k8s main (owner and repository IDs included).
 github_kubernetes_cd_subject = "repo:Songhai9@118692197/books-k8s@1338668243:ref:refs/heads/main"
+
+# Immutable OIDC subject pattern for version tags published by Songhai9/books.
+github_application_release_subject = "repo:Songhai9@118692197/books@1336298774:ref:refs/tags/v*.*.*"
