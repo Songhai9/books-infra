@@ -143,3 +143,17 @@ variable "github_kubernetes_cd_subject" {
     error_message = "github_kubernetes_cd_subject must identify the immutable books-k8s main branch subject."
   }
 }
+
+variable "github_application_release_subject" {
+  description = "Immutable GitHub OIDC subject pattern allowed to deploy versioned books releases."
+  type        = string
+  default     = "repo:Songhai9@118692197/books@1336298774:ref:refs/tags/v*.*.*"
+
+  validation {
+    condition = (
+      startswith(var.github_application_release_subject, "repo:Songhai9@118692197/books@1336298774:")
+      && endswith(var.github_application_release_subject, ":ref:refs/tags/v*.*.*")
+    )
+    error_message = "github_application_release_subject must identify immutable books SemVer tags."
+  }
+}

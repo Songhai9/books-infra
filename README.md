@@ -112,13 +112,19 @@ Terraform creates two distinct IAM identities for the deployment path:
 - the control-plane instance profile attaches `AmazonSSMManagedInstanceCore`,
   which registers the EC2 instance as a Systems Manager managed node; and
 - the GitHub CD role trusts only the immutable OIDC subject for the
-  `Songhai9/books-k8s` repository's `main` branch.
+  `Songhai9/books-k8s` repository's `main` branch and version tags matching
+  `v*.*.*` from the immutable `Songhai9/books` repository identity.
 
 The GitHub role can send only the `AWS-RunShellScript` document to the exact
 control-plane instance and read that command's result. It cannot open an SSH
 session, modify EC2 resources, or send commands to another instance. GitHub
 Actions exchanges its OIDC token for temporary AWS credentials, so no AWS
 access key is stored in GitHub.
+
+The application release workflow can therefore call the reusable Kubernetes
+deployment workflow only after publishing and smoke-testing a versioned image.
+Branches, pull requests, and non-version tags from the application repository
+cannot assume the deployment role.
 
 After applying this configuration, copy
 `github_kubernetes_cd_role_arn` and
