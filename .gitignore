@@ -1,0 +1,31 @@
+# Terraform working directories and state
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Terraform plans and local variable values
+*.tfplan
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+# Terraform CLI configuration
+.terraformrc
+terraform.rc
+
+# Ansible runtime files and generated inventories
+*.retry
+ansible/inventory/generated*
+
+# Credentials and private keys
+*.pem
+*.key
+.env
+.env.*
+
+# Operating system and editor files
+.DS_Store
+.idea/
+.vscode/
