@@ -14,7 +14,7 @@ costs.
 .
 ├── .github/workflows/  # Continuous integration workflows
 ├── ansible/            # Host configuration (introduced in a later phase)
-└── terraform/          # AWS infrastructure definitions
+└── terraform/          # AWS network and infrastructure definitions
 ```
 
 ## Prerequisites
@@ -33,8 +33,8 @@ aws sts get-caller-identity --profile books-admin
 
 ## Validate Terraform locally
 
-The bootstrap configuration only initializes the AWS provider and validates the
-Terraform files. It does not call `terraform apply`.
+The validation commands initialize the AWS provider and check the Terraform
+files. They do not call `terraform apply`.
 
 ```bash
 cd terraform
@@ -43,11 +43,27 @@ terraform init
 terraform validate
 ```
 
-When AWS access is required in a later phase, select the profile explicitly:
+Copy the example variables file and replace its documentation-only address with
+your current public IPv4 address in `/32` notation:
+
+```bash
+cp terraform.tfvars.example terraform.tfvars
+```
+
+The local `terraform.tfvars` file is ignored by Git. Preview the network changes
+with the authenticated AWS profile:
 
 ```bash
 AWS_PROFILE=books-admin terraform plan
 ```
+
+The network plan creates a VPC (`10.10.0.0/16`), one public subnet
+(`10.10.1.0/24`), an Internet Gateway, public routing, and an application
+Security Group. SSH is restricted to `admin_cidr`, HTTP is public on port 80,
+and PostgreSQL is not exposed.
+
+This phase does not create an EC2 instance, NAT Gateway, load balancer, or public
+IPv4 address. Review a saved plan before running any future `terraform apply`.
 
 ## Cost controls
 
@@ -61,6 +77,6 @@ IPv4 addresses.
 
 ## Terraform state
 
-Terraform state is local during the bootstrap phase and is excluded from Git.
+Terraform state is local during the initial phases and is excluded from Git.
 A remote backend will be introduced separately before collaborative or automated
 deployments.

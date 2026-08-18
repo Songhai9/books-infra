@@ -1,2 +1,3 @@
-# AWS resources are deliberately introduced in the next phase, after the
-# provider configuration and validation workflow have been approved.
+locals {
+  name_prefix = "${var.default_tags["Project"]}-${var.default_tags["Environment"]}"
+}
