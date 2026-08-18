@@ -1,0 +1,26 @@
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: InitConfiguration
+localAPIEndpoint:
+  advertiseAddress: "{{ kubernetes_private_ip }}"
+  bindPort: 6443
+nodeRegistration:
+  name: "{{ inventory_hostname }}"
+  criSocket: "{{ kubernetes_cri_socket }}"
+  kubeletExtraArgs:
+    - name: node-ip
+      value: "{{ kubernetes_private_ip }}"
+---
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: ClusterConfiguration
+clusterName: books-dev
+kubernetesVersion: "v{{ kubernetes_version }}"
+controlPlaneEndpoint: "{{ kubernetes_private_ip }}:6443"
+networking:
+  dnsDomain: cluster.local
+  podSubnet: "{{ kubernetes_pod_subnet }}"
+  serviceSubnet: "{{ kubernetes_service_subnet }}"
+apiServer:
+  certSANs:
+    - "{{ kubernetes_private_ip }}"
+    - "{{ ansible_host }}"
+

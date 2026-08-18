@@ -4,16 +4,16 @@ Infrastructure as Code for the Book Notes application. This repository will
 provision AWS resources with Terraform and configure the resulting hosts with
 Ansible.
 
-The project intentionally grows in small, reviewable phases. The current
-foundation contains the network and a single cost-conscious EC2 host that will
-be configured by Ansible in the next phase.
+The project intentionally grows in small, reviewable phases. It currently
+contains the AWS network, a standalone application host, and a two-node kubeadm
+cluster configured idempotently with Ansible.
 
 ## Repository structure
 
 ```text
 .
 ├── .github/workflows/  # Continuous integration workflows
-├── ansible/            # Idempotent Docker configuration for the EC2 host
+├── ansible/            # Idempotent Docker and Kubernetes configuration
 ├── bootstrap/          # S3 backend used to store and lock Terraform states
 └── terraform/          # AWS network and infrastructure definitions
 ```
@@ -73,8 +73,37 @@ official Docker repository, and deploys the versioned Book Notes application
 with PostgreSQL through Docker Compose. See `ansible/README.md` for the
 connectivity, deployment, check-mode, and idempotence commands.
 
-This phase does not create a NAT Gateway, load balancer, managed database, or
-Kubernetes cluster. Review a saved plan before every `terraform apply`.
+This project does not create a NAT Gateway, load balancer, or managed database.
+The kubeadm lab cluster is provisioned directly on EC2. Review a saved plan
+before every `terraform apply`.
+
+## Kubeadm lab architecture
+
+The Kubernetes infrastructure adds one `t3.small` control-plane node and one
+`t3.small` worker node in the existing public subnet. Both nodes use encrypted
+20 GiB gp3 root volumes and standard T3 CPU credits. The control plane receives
+a stable Elastic IP for the Kubernetes API; the worker keeps an ephemeral public
+address for initial Ansible administration.
+
+Separate Security Groups expose SSH and the Kubernetes API only to
+`admin_cidr`. Future HTTP and HTTPS workloads are accepted on the worker. All
+other Kubernetes and CNI traffic is limited to references between the two node
+Security Groups.
+
+The first Gateway API deployment exposes Envoy through worker NodePort `30080`.
+Terraform opens only that explicit NodePort instead of the complete Kubernetes
+NodePort range.
+
+Ansible installs Kubernetes `v1.36.3` with containerd, initializes the cluster
+with kubeadm, deploys Flannel for pod networking, and joins the worker over the
+private VPC network. Package versions are pinned and held; a second playbook run
+converges with no changes. See `ansible/README.md` for the role boundaries,
+verification commands, and upgrade warning.
+
+The standalone Compose host is stopped while the cluster is running to avoid
+unnecessary simultaneous compute charges. Its EBS data remains preserved. The
+cluster nodes must be destroyed after lab sessions when their state does not
+need to persist.
 
 ## Cost controls
 

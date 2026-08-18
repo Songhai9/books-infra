@@ -5,3 +5,18 @@ books-dev-app ansible_host=203.0.113.10
 ansible_user=ubuntu
 ansible_ssh_private_key_file=~/.ssh/terraform_ex
 ansible_python_interpreter=/usr/bin/python3
+
+[kubernetes_control_plane]
+books-dev-k8s-control-plane ansible_host=203.0.113.20 kubernetes_private_ip=10.10.1.20
+
+[kubernetes_workers]
+books-dev-k8s-worker ansible_host=203.0.113.21 kubernetes_private_ip=10.10.1.21
+
+[kubernetes:children]
+kubernetes_control_plane
+kubernetes_workers
+
+[kubernetes:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file=~/.ssh/terraform_ex
+ansible_python_interpreter=/usr/bin/python3

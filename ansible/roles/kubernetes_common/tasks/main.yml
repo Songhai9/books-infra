@@ -1,0 +1,146 @@
+---
+- name: Confirm the node runs the supported operating system
+  ansible.builtin.assert:
+    that:
+      - ansible_facts["distribution"] == "Ubuntu"
+      - ansible_facts["distribution_release"] == "noble"
+      - ansible_facts["architecture"] == "x86_64"
+      - ansible_facts["processor_vcpus"] | int >= 2
+      - ansible_facts["memtotal_mb"] | int >= 1700
+    fail_msg: Kubernetes nodes require Ubuntu 24.04 x86_64, 2 vCPU, and at least 1700 MiB of usable RAM.
+
+- name: Give the node its Kubernetes inventory name
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: Install Kubernetes operating-system prerequisites
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - containerd
+      - curl
+      - gpg
+      - python3-debian
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Disable active swap
+  ansible.builtin.command: swapoff --all
+  when: ansible_facts["swaptotal_mb"] | int > 0
+  changed_when: true
+
+- name: Keep swap disabled after reboot
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^([^#].*\s+swap\s+.*)$'
+    replace: '# \1'
+
+- name: Load Kubernetes kernel modules at boot
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/kubernetes.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      overlay
+      br_netfilter
+
+- name: Load Kubernetes kernel modules now
+  ansible.builtin.command: "modprobe {{ item }}"
+  loop:
+    - overlay
+    - br_netfilter
+  changed_when: false
+
+- name: Configure Kubernetes networking kernel parameters
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/99-kubernetes-cri.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      net.bridge.bridge-nf-call-iptables = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.ipv4.ip_forward = 1
+  notify: Apply Kubernetes kernel settings
+
+- name: Create the containerd configuration directory
+  ansible.builtin.file:
+    path: /etc/containerd
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Configure containerd as the Kubernetes CRI runtime
+  ansible.builtin.template:
+    src: containerd-config.toml.j2
+    dest: /etc/containerd/config.toml
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart containerd
+
+- name: Apply runtime and kernel changes before kubeadm runs
+  ansible.builtin.meta: flush_handlers
+
+- name: Add the official Kubernetes package repository
+  ansible.builtin.deb822_repository:
+    name: kubernetes
+    types:
+      - deb
+    uris:
+      - "https://pkgs.k8s.io/core:/stable:/{{ kubernetes_minor_version }}/deb/"
+    suites:
+      - /
+    signed_by: "https://pkgs.k8s.io/core:/stable:/{{ kubernetes_minor_version }}/deb/Release.key"
+    state: present
+  register: kubernetes_repository
+
+- name: Refresh APT after adding the Kubernetes repository
+  ansible.builtin.apt:
+    update_cache: true
+  when: kubernetes_repository.changed
+
+- name: Install the pinned Kubernetes node packages
+  ansible.builtin.apt:
+    name:
+      - "cri-tools={{ kubernetes_cri_tools_package_version }}"
+      - "kubeadm={{ kubernetes_package_version }}"
+      - "kubectl={{ kubernetes_package_version }}"
+      - "kubelet={{ kubernetes_package_version }}"
+    state: present
+    allow_downgrade: true
+
+- name: Hold Kubernetes packages until an explicit upgrade
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+    - cri-tools
+    - kubeadm
+    - kubectl
+    - kubelet
+
+- name: Enable containerd
+  ansible.builtin.service:
+    name: containerd
+    enabled: true
+    state: started
+
+- name: Enable kubelet for cluster boot
+  ansible.builtin.service:
+    name: kubelet
+    enabled: true
+
+- name: Verify that containerd exposes a healthy CRI socket
+  ansible.builtin.command: crictl --runtime-endpoint "{{ kubernetes_cri_socket }}" info
+  changed_when: false
+
+- name: Verify the installed kubeadm version
+  ansible.builtin.command: kubeadm version --output=short
+  register: installed_kubeadm_version
+  changed_when: false
+  failed_when: installed_kubeadm_version.stdout != 'v' + kubernetes_version

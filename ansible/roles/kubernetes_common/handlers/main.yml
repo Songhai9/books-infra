@@ -1,0 +1,11 @@
+---
+- name: Restart containerd
+  ansible.builtin.service:
+    name: containerd
+    enabled: true
+    state: restarted
+
+- name: Apply Kubernetes kernel settings
+  ansible.builtin.command: sysctl --system
+  changed_when: true
+
