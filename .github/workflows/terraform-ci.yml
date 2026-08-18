@@ -5,10 +5,12 @@ on:
     branches:
       - main
     paths:
+      - "bootstrap/**"
       - "terraform/**"
       - ".github/workflows/terraform-ci.yml"
   pull_request:
     paths:
+      - "bootstrap/**"
       - "terraform/**"
       - ".github/workflows/terraform-ci.yml"
   workflow_dispatch:
@@ -22,13 +24,20 @@ concurrency:
 
 jobs:
   validate:
-    name: Format and validate Terraform
+    name: Validate Terraform (${{ matrix.directory }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
+    strategy:
+      fail-fast: false
+      matrix:
+        directory:
+          - bootstrap
+          - terraform
+
     defaults:
       run:
-        working-directory: terraform
+        working-directory: ${{ matrix.directory }}
 
     steps:
       - name: Check out the repository
@@ -48,3 +57,16 @@ jobs:
 
       - name: Validate Terraform configuration
         run: terraform validate -no-color
+
+  required:
+    name: Format and validate Terraform
+    needs: validate
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Confirm every Terraform validation passed
+        env:
+          VALIDATION_RESULT: ${{ needs.validate.result }}
+        run: test "$VALIDATION_RESULT" = "success"

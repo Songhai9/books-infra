@@ -14,6 +14,7 @@ costs.
 .
 ├── .github/workflows/  # Continuous integration workflows
 ├── ansible/            # Host configuration (introduced in a later phase)
+├── bootstrap/          # S3 backend used to store and lock Terraform states
 └── terraform/          # AWS network and infrastructure definitions
 ```
 
@@ -77,6 +78,18 @@ IPv4 addresses.
 
 ## Terraform state
 
-Terraform state is local during the initial phases and is excluded from Git.
-A remote backend will be introduced separately before collaborative or automated
-deployments.
+Terraform states are stored in the private, versioned, and encrypted S3 bucket
+`songhai9-books-infra-tfstate-eu-west-3`:
+
+```text
+bootstrap/terraform.tfstate
+books/dev/terraform.tfstate
+```
+
+The S3 backend uses native lockfiles to prevent concurrent writes. DynamoDB is
+not required. Local state files, backend metadata, plans, and variable values
+remain excluded from Git.
+
+The `bootstrap/` configuration owns the state bucket itself. Its
+`prevent_destroy` lifecycle rule protects the bucket from an accidental
+`terraform destroy`.
