@@ -1,3 +1,10 @@
 # Replace this documentation-only address with your current public IPv4 /32.
 # Copy this file to terraform.tfvars locally; terraform.tfvars is ignored by Git.
 admin_cidr = "203.0.113.10/32"
+
+# Only the public key is uploaded to AWS. Never reference a private key here.
+ssh_public_key_path = "~/.ssh/terraform_ex.pub"
+
+# Cost-conscious default for the first Ansible target.
+instance_type    = "t3.micro"
+root_volume_size = 8

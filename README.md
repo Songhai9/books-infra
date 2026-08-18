@@ -4,9 +4,9 @@ Infrastructure as Code for the Book Notes application. This repository will
 provision AWS resources with Terraform and configure the resulting hosts with
 Ansible.
 
-The project intentionally starts with a minimal foundation. The current phase
-does not create any AWS resources and therefore does not generate infrastructure
-costs.
+The project intentionally grows in small, reviewable phases. The current
+foundation contains the network and a single cost-conscious EC2 host that will
+be configured by Ansible in the next phase.
 
 ## Repository structure
 
@@ -58,13 +58,18 @@ with the authenticated AWS profile:
 AWS_PROFILE=books-admin terraform plan
 ```
 
-The network plan creates a VPC (`10.10.0.0/16`), one public subnet
-(`10.10.1.0/24`), an Internet Gateway, public routing, and an application
-Security Group. SSH is restricted to `admin_cidr`, HTTP is public on port 80,
-and PostgreSQL is not exposed.
+The infrastructure contains a VPC (`10.10.0.0/16`), one public subnet
+(`10.10.1.0/24`), an Internet Gateway, public routing, an application Security
+Group, and one Ubuntu 24.04 EC2 instance. SSH is restricted to `admin_cidr`, HTTP
+is public on port 80, and PostgreSQL is not exposed.
 
-This phase does not create an EC2 instance, NAT Gateway, load balancer, or public
-IPv4 address. Review a saved plan before running any future `terraform apply`.
+The EC2 instance uses a cost-conscious T3 size with standard CPU credits,
+requires IMDSv2, and stores its operating system on an encrypted gp3 volume.
+Only the public half of the dedicated SSH key is imported into AWS. The private
+key remains on the administrator workstation.
+
+This phase does not create a NAT Gateway, load balancer, managed database, or
+Kubernetes cluster. Review a saved plan before every `terraform apply`.
 
 ## Cost controls
 
