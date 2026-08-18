@@ -1,4 +1,42 @@
 ---
+- name: Install control-plane deployment prerequisites
+  ansible.builtin.apt:
+    name:
+      - git
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Download the pinned Helm archive
+  ansible.builtin.get_url:
+    url: "https://get.helm.sh/helm-v{{ helm_version }}-linux-amd64.tar.gz"
+    dest: "/tmp/helm-v{{ helm_version }}-linux-amd64.tar.gz"
+    checksum: "sha256:{{ helm_linux_amd64_checksum }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Extract the pinned Helm archive
+  ansible.builtin.unarchive:
+    src: "/tmp/helm-v{{ helm_version }}-linux-amd64.tar.gz"
+    dest: /tmp
+    remote_src: true
+
+- name: Install the Helm client
+  ansible.builtin.copy:
+    src: /tmp/linux-amd64/helm
+    dest: /usr/local/bin/helm
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Verify the installed Helm version
+  ansible.builtin.command: helm version --short
+  register: installed_helm_version
+  changed_when: false
+  failed_when: not installed_helm_version.stdout.startswith('v' + helm_version)
+
 - name: Install the kubeadm control-plane configuration
   ansible.builtin.template:
     src: kubeadm-config.yaml.j2
@@ -61,4 +99,3 @@
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
   changed_when: false
-

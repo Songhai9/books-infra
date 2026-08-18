@@ -129,3 +129,17 @@ variable "kubernetes_gateway_http_node_port" {
     error_message = "kubernetes_gateway_http_node_port must be in the Kubernetes NodePort range 30000-32767."
   }
 }
+
+variable "github_kubernetes_cd_subject" {
+  description = "Immutable GitHub OIDC subject allowed to deploy books-k8s from main."
+  type        = string
+  default     = "repo:Songhai9@118692197/books-k8s@1338668243:ref:refs/heads/main"
+
+  validation {
+    condition = (
+      startswith(var.github_kubernetes_cd_subject, "repo:Songhai9@118692197/books-k8s@1338668243:")
+      && endswith(var.github_kubernetes_cd_subject, ":ref:refs/heads/main")
+    )
+    error_message = "github_kubernetes_cd_subject must identify the immutable books-k8s main branch subject."
+  }
+}

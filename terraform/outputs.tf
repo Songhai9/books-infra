@@ -72,3 +72,13 @@ output "kubernetes_worker_private_ip" {
   description = "Private VPC address used for internal worker traffic."
   value       = aws_instance.kubernetes_worker.private_ip
 }
+
+output "github_kubernetes_cd_role_arn" {
+  description = "IAM role assumed by the books-k8s deployment workflow through GitHub OIDC."
+  value       = aws_iam_role.github_kubernetes_cd.arn
+}
+
+output "kubernetes_control_plane_instance_profile_name" {
+  description = "IAM instance profile that registers the control plane with Systems Manager."
+  value       = aws_iam_instance_profile.kubernetes_control_plane.name
+}

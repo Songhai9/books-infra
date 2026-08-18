@@ -105,6 +105,28 @@ unnecessary simultaneous compute charges. Its EBS data remains preserved. The
 cluster nodes must be destroyed after lab sessions when their state does not
 need to persist.
 
+## Kubernetes continuous deployment access
+
+Terraform creates two distinct IAM identities for the deployment path:
+
+- the control-plane instance profile attaches `AmazonSSMManagedInstanceCore`,
+  which registers the EC2 instance as a Systems Manager managed node; and
+- the GitHub CD role trusts only the immutable OIDC subject for the
+  `Songhai9/books-k8s` repository's `main` branch.
+
+The GitHub role can send only the `AWS-RunShellScript` document to the exact
+control-plane instance and read that command's result. It cannot open an SSH
+session, modify EC2 resources, or send commands to another instance. GitHub
+Actions exchanges its OIDC token for temporary AWS credentials, so no AWS
+access key is stored in GitHub.
+
+After applying this configuration, copy
+`github_kubernetes_cd_role_arn` and
+`kubernetes_control_plane_instance_id` to the matching non-secret repository
+variables in `Songhai9/books-k8s`. Ansible installs the pinned Helm client on
+the control plane; the deployment workflow then invokes Helm through Systems
+Manager from inside the cluster network.
+
 ## Cost controls
 
 The AWS account has a monthly cost budget named `books-infra-monthly` with a
