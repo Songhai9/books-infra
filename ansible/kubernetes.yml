@@ -1,0 +1,25 @@
+---
+- name: Prepare every Kubernetes node
+  hosts: kubernetes
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: kubernetes_common
+
+- name: Initialize the Kubernetes control plane
+  hosts: kubernetes_control_plane
+  become: true
+  gather_facts: false
+
+  roles:
+    - role: kubernetes_control_plane
+
+- name: Join Kubernetes worker nodes
+  hosts: kubernetes_workers
+  become: true
+  gather_facts: false
+
+  roles:
+    - role: kubernetes_worker
+

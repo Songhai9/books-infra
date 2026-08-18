@@ -1,0 +1,64 @@
+---
+- name: Install the kubeadm control-plane configuration
+  ansible.builtin.template:
+    src: kubeadm-config.yaml.j2
+    dest: /etc/kubernetes/kubeadm-config.yaml
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Check whether the control plane is already initialized
+  ansible.builtin.stat:
+    path: /etc/kubernetes/admin.conf
+  register: kubernetes_admin_config
+
+- name: Initialize the Kubernetes control plane
+  ansible.builtin.command: kubeadm init --config /etc/kubernetes/kubeadm-config.yaml
+  when: not kubernetes_admin_config.stat.exists
+  changed_when: true
+
+- name: Create the administrator kubeconfig directory
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user }}/.kube"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0700"
+
+- name: Install the administrator kubeconfig
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "/home/{{ ansible_user }}/.kube/config"
+    remote_src: true
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0600"
+
+- name: Download the pinned Flannel manifest
+  ansible.builtin.get_url:
+    url: "https://github.com/flannel-io/flannel/releases/download/{{ flannel_version }}/kube-flannel.yml"
+    dest: "/etc/kubernetes/kube-flannel-{{ flannel_version }}.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install the Flannel pod network
+  ansible.builtin.command:
+    cmd: "kubectl apply --filename /etc/kubernetes/kube-flannel-{{ flannel_version }}.yml"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: flannel_apply
+  changed_when: >-
+    ' created' in flannel_apply.stdout
+    or ' configured' in flannel_apply.stdout
+
+- name: Wait for the control-plane node to become ready
+  ansible.builtin.command: >-
+    kubectl wait
+    --for=condition=Ready
+    node/{{ inventory_hostname }}
+    --timeout=240s
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
+

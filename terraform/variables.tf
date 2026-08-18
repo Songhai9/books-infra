@@ -79,3 +79,53 @@ variable "root_volume_size" {
     error_message = "root_volume_size must be between 8 and 30 GiB."
   }
 }
+
+variable "kubernetes_control_plane_instance_type" {
+  description = "EC2 instance type used by the kubeadm control-plane node."
+  type        = string
+  default     = "t3.small"
+
+  validation {
+    condition = contains(
+      ["t3.small", "t3.medium"],
+      var.kubernetes_control_plane_instance_type
+    )
+    error_message = "The control-plane instance type must be t3.small or t3.medium."
+  }
+}
+
+variable "kubernetes_worker_instance_type" {
+  description = "EC2 instance type used by the kubeadm worker node."
+  type        = string
+  default     = "t3.small"
+
+  validation {
+    condition = contains(
+      ["t3.small", "t3.medium"],
+      var.kubernetes_worker_instance_type
+    )
+    error_message = "The worker instance type must be t3.small or t3.medium."
+  }
+}
+
+variable "kubernetes_root_volume_size" {
+  description = "Size in GiB of each encrypted Kubernetes node root volume."
+  type        = number
+  default     = 20
+
+  validation {
+    condition     = var.kubernetes_root_volume_size >= 20 && var.kubernetes_root_volume_size <= 50
+    error_message = "kubernetes_root_volume_size must be between 20 and 50 GiB."
+  }
+}
+
+variable "kubernetes_gateway_http_node_port" {
+  description = "Worker NodePort used to expose the HTTP Gateway API listener."
+  type        = number
+  default     = 30080
+
+  validation {
+    condition     = var.kubernetes_gateway_http_node_port >= 30000 && var.kubernetes_gateway_http_node_port <= 32767
+    error_message = "kubernetes_gateway_http_node_port must be in the Kubernetes NodePort range 30000-32767."
+  }
+}

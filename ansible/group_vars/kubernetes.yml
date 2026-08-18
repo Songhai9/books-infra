@@ -1,0 +1,10 @@
+---
+kubernetes_version: "1.36.3"
+kubernetes_minor_version: "v1.36"
+kubernetes_package_version: "1.36.3-1.1"
+kubernetes_cri_tools_package_version: "1.36.0-1.1"
+kubernetes_pod_subnet: "10.244.0.0/16"
+kubernetes_service_subnet: "10.96.0.0/12"
+kubernetes_cri_socket: "unix:///run/containerd/containerd.sock"
+kubernetes_pause_image: "registry.k8s.io/pause:3.10.2"
+flannel_version: "v0.28.8"
