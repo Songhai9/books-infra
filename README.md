@@ -8,6 +8,18 @@ The project intentionally grows in small, reviewable phases. It currently
 contains the AWS network, a standalone application host, and a two-node kubeadm
 cluster configured idempotently with Ansible.
 
+## Security checks
+
+The security workflow scans every Git commit for secrets, evaluates Terraform
+against Trivy's high and critical misconfiguration rules, and enforces
+ansible-lint's production profile. It runs for pull requests, pushes to `main`,
+every Monday, and manual dispatches.
+
+Accepted Trivy findings live in `.trivyignore.yaml`, where each exception has
+a narrow file scope, a written architectural justification, and an expiry
+date. An exception is therefore reviewable technical debt rather than a silent
+global suppression.
+
 ## Repository structure
 
 ```text

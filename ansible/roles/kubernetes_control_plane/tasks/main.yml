@@ -33,9 +33,10 @@
 
 - name: Verify the installed Helm version
   ansible.builtin.command: helm version --short
-  register: installed_helm_version
+  register: kubernetes_control_plane_installed_helm_version
   changed_when: false
-  failed_when: not installed_helm_version.stdout.startswith('v' + helm_version)
+  failed_when: >-
+    not kubernetes_control_plane_installed_helm_version.stdout.startswith('v' + helm_version)
 
 - name: Install the kubeadm control-plane configuration
   ansible.builtin.template:
@@ -48,11 +49,11 @@
 - name: Check whether the control plane is already initialized
   ansible.builtin.stat:
     path: /etc/kubernetes/admin.conf
-  register: kubernetes_admin_config
+  register: kubernetes_control_plane_admin_config
 
 - name: Initialize the Kubernetes control plane
   ansible.builtin.command: kubeadm init --config /etc/kubernetes/kubeadm-config.yaml
-  when: not kubernetes_admin_config.stat.exists
+  when: not kubernetes_control_plane_admin_config.stat.exists
   changed_when: true
 
 - name: Create the administrator kubeconfig directory
@@ -85,10 +86,10 @@
     cmd: "kubectl apply --filename /etc/kubernetes/kube-flannel-{{ flannel_version }}.yml"
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
-  register: flannel_apply
+  register: kubernetes_control_plane_flannel_apply
   changed_when: >-
-    ' created' in flannel_apply.stdout
-    or ' configured' in flannel_apply.stdout
+    ' created' in kubernetes_control_plane_flannel_apply.stdout
+    or ' configured' in kubernetes_control_plane_flannel_apply.stdout
 
 - name: Wait for the control-plane node to become ready
   ansible.builtin.command: >-

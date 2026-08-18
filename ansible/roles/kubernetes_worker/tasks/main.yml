@@ -2,22 +2,22 @@
 - name: Check whether this worker already belongs to the cluster
   ansible.builtin.stat:
     path: /etc/kubernetes/kubelet.conf
-  register: kubernetes_kubelet_config
+  register: kubernetes_worker_kubelet_config
 
 - name: Create a short-lived worker join command
   ansible.builtin.command: kubeadm token create --print-join-command --ttl 30m
   delegate_to: "{{ groups['kubernetes_control_plane'][0] }}"
-  register: kubernetes_join_command
-  when: not kubernetes_kubelet_config.stat.exists
+  register: kubernetes_worker_join_command
+  when: not kubernetes_worker_kubelet_config.stat.exists
   changed_when: false
   no_log: true
 
 - name: Join the worker to the Kubernetes cluster
   ansible.builtin.command: >-
-    {{ kubernetes_join_command.stdout }}
+    {{ kubernetes_worker_join_command.stdout }}
     --cri-socket {{ kubernetes_cri_socket }}
     --node-name {{ inventory_hostname }}
-  when: not kubernetes_kubelet_config.stat.exists
+  when: not kubernetes_worker_kubelet_config.stat.exists
   changed_when: true
   no_log: true
 
@@ -31,4 +31,3 @@
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
   changed_when: false
-

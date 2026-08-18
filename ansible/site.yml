@@ -23,6 +23,11 @@
       - docker-buildx-plugin
       - docker-compose-plugin
 
+  handlers:
+    - name: Refresh Docker APT cache
+      ansible.builtin.apt:
+        update_cache: true
+
   tasks:
     - name: Confirm the host runs a supported Ubuntu release
       ansible.builtin.assert:
@@ -57,12 +62,10 @@
           - amd64
         signed_by: https://download.docker.com/linux/ubuntu/gpg
         state: present
-      register: docker_repository
+      notify: Refresh Docker APT cache
 
-    - name: Refresh APT after adding the Docker repository
-      ansible.builtin.apt:
-        update_cache: true
-      when: docker_repository.changed
+    - name: Apply the repository change before installing Docker
+      ansible.builtin.meta: flush_handlers
 
     - name: Install Docker Engine and Compose
       ansible.builtin.apt:

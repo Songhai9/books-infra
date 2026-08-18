@@ -97,12 +97,10 @@
       - /
     signed_by: "https://pkgs.k8s.io/core:/stable:/{{ kubernetes_minor_version }}/deb/Release.key"
     state: present
-  register: kubernetes_repository
+  notify: Refresh Kubernetes APT cache
 
-- name: Refresh APT after adding the Kubernetes repository
-  ansible.builtin.apt:
-    update_cache: true
-  when: kubernetes_repository.changed
+- name: Apply the repository change before installing Kubernetes
+  ansible.builtin.meta: flush_handlers
 
 - name: Install the pinned Kubernetes node packages
   ansible.builtin.apt:
@@ -141,6 +139,6 @@
 
 - name: Verify the installed kubeadm version
   ansible.builtin.command: kubeadm version --output=short
-  register: installed_kubeadm_version
+  register: kubernetes_common_installed_kubeadm_version
   changed_when: false
-  failed_when: installed_kubeadm_version.stdout != 'v' + kubernetes_version
+  failed_when: kubernetes_common_installed_kubeadm_version.stdout != 'v' + kubernetes_version
