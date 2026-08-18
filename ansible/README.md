@@ -91,11 +91,13 @@ the secret does not appear in logs.
 The SQL schema is downloaded from the matching `v1.0.0` application tag and
 verified against a pinned SHA-256 checksum before Compose can use it.
 
-After deployment, browse to the public EC2 address or verify the endpoints:
+After deployment, read the current public address from Terraform and verify the
+endpoints. The address changes after a stop/start cycle:
 
 ```bash
-curl http://51.44.170.23/health
-curl http://51.44.170.23/ready
+APP_PUBLIC_IP="$(terraform -chdir=../terraform output -raw app_public_ip)"
+curl "http://${APP_PUBLIC_IP}/health"
+curl "http://${APP_PUBLIC_IP}/ready"
 ```
 
 This is a minimal HTTP lab deployment. TLS and a stable domain name will be
