@@ -1,0 +1,30 @@
+misconfigurations:
+  - id: AVD-AWS-0132
+    paths:
+      - "bootstrap/state_bucket.tf"
+    statement: >-
+      The low-cost lab deliberately uses Amazon-managed SSE-S3. A dedicated
+      customer-managed KMS key would add recurring cost without changing the
+      public demo workload's threat model. Reassess before storing production
+      state or introducing compliance requirements.
+    expired_at: 2027-08-18
+
+  - id: AVD-AWS-0104
+    paths:
+      - "terraform/network.tf"
+      - "terraform/kubernetes.tf"
+    statement: >-
+      The public lab nodes require outbound Internet access for signed Ubuntu,
+      Docker, Kubernetes, Helm, and container-image downloads. There is no NAT
+      Gateway in this cost-conscious architecture. Reassess if private subnets
+      or VPC endpoints are introduced.
+    expired_at: 2027-08-18
+
+  - id: AVD-AWS-0164
+    paths:
+      - "terraform/network.tf"
+    statement: >-
+      Public addressing is intentional because this educational environment
+      omits a NAT Gateway and load balancer. Inbound access remains restricted
+      by explicit Security Group rules. Reassess for a production deployment.
+    expired_at: 2027-08-18

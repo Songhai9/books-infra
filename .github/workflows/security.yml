@@ -1,0 +1,99 @@
+name: Infrastructure Security
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "31 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infrastructure-security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets:
+    name: Scan Git history for secrets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out the complete Git history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect committed secrets
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  terraform:
+    name: Scan Terraform misconfigurations
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Block high and critical Terraform findings
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: config
+          scan-ref: .
+          scanners: misconfig
+          severity: HIGH,CRITICAL
+          trivyignores: .trivyignore.yaml
+          exit-code: 1
+          format: table
+
+  ansible:
+    name: Lint Ansible with production profile
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: ansible
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Install pinned Ansible security tooling
+        run: pip install ansible-core==2.21.3 ansible-lint==26.8.0
+
+      - name: Enforce the production lint profile
+        run: ansible-lint --profile production
+
+  required:
+    name: Required infrastructure security checks
+    if: always()
+    needs:
+      - secrets
+      - terraform
+      - ansible
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Verify all security jobs passed
+        env:
+          SECRETS_RESULT: ${{ needs.secrets.result }}
+          TERRAFORM_RESULT: ${{ needs.terraform.result }}
+          ANSIBLE_RESULT: ${{ needs.ansible.result }}
+        run: |
+          test "${SECRETS_RESULT}" = "success"
+          test "${TERRAFORM_RESULT}" = "success"
+          test "${ANSIBLE_RESULT}" = "success"
