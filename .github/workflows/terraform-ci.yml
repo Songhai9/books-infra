@@ -1,4 +1,4 @@
-name: Terraform CI
+name: Infrastructure CI
 
 on:
   push:
@@ -7,11 +7,13 @@ on:
     paths:
       - "bootstrap/**"
       - "terraform/**"
+      - "ansible/**"
       - ".github/workflows/terraform-ci.yml"
   pull_request:
     paths:
       - "bootstrap/**"
       - "terraform/**"
+      - "ansible/**"
       - ".github/workflows/terraform-ci.yml"
   workflow_dispatch:
 
@@ -60,13 +62,46 @@ jobs:
 
   required:
     name: Format and validate Terraform
-    needs: validate
+    needs:
+      - validate
+      - validate_ansible
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
-      - name: Confirm every Terraform validation passed
+      - name: Confirm every infrastructure validation passed
         env:
-          VALIDATION_RESULT: ${{ needs.validate.result }}
-        run: test "$VALIDATION_RESULT" = "success"
+          TERRAFORM_RESULT: ${{ needs.validate.result }}
+          ANSIBLE_RESULT: ${{ needs.validate_ansible.result }}
+        run: |
+          test "$TERRAFORM_RESULT" = "success"
+          test "$ANSIBLE_RESULT" = "success"
+
+  validate_ansible:
+    name: Validate Ansible
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: ansible
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install Ansible Core
+        run: pip install ansible-core==2.21.3
+
+      - name: Check playbook syntax
+        run: >-
+          ansible-playbook
+          --inventory inventory/hosts.ini.example
+          --syntax-check
+          site.yml

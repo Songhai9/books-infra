@@ -13,7 +13,7 @@ be configured by Ansible in the next phase.
 ```text
 .
 ├── .github/workflows/  # Continuous integration workflows
-├── ansible/            # Host configuration (introduced in a later phase)
+├── ansible/            # Idempotent Docker configuration for the EC2 host
 ├── bootstrap/          # S3 backend used to store and lock Terraform states
 └── terraform/          # AWS network and infrastructure definitions
 ```
@@ -67,6 +67,10 @@ The EC2 instance uses a cost-conscious T3 size with standard CPU credits,
 requires IMDSv2, and stores its operating system on an encrypted gp3 volume.
 Only the public half of the dedicated SSH key is imported into AWS. The private
 key remains on the administrator workstation.
+
+Ansible connects to this instance over SSH and installs Docker Engine from the
+official Docker repository. See `ansible/README.md` for the connectivity,
+check-mode, apply, and idempotence commands.
 
 This phase does not create a NAT Gateway, load balancer, managed database, or
 Kubernetes cluster. Review a saved plan before every `terraform apply`.
