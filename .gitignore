@@ -18,6 +18,8 @@ terraform.rc
 # Ansible runtime files and generated inventories
 *.retry
 ansible/inventory/generated*
+ansible/secrets/*
+!ansible/secrets/.gitkeep
 
 # Credentials and private keys
 *.pem

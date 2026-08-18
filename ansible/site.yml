@@ -5,6 +5,17 @@
   gather_facts: true
 
   vars:
+    book_notes_deploy_path: /opt/book-notes
+    book_notes_image: ghcr.io/songhai9/books
+    book_notes_version: "1.0.0"
+    book_notes_schema_checksum: sha256:97a7cbafdb0c6429e29b73322f0db400d1487b7fc27da2bbb148fbc618512b91
+    book_notes_postgres_password: >-
+      {{ lookup(
+        'ansible.builtin.password',
+        playbook_dir + '/secrets/postgres_password',
+        length=32,
+        chars=['ascii_letters', 'digits']
+      ) }}
     docker_packages:
       - docker-ce
       - docker-ce-cli
@@ -82,3 +93,69 @@
       ansible.builtin.command: docker compose version
       become: false
       changed_when: false
+
+    - name: Create the Book Notes deployment directory
+      ansible.builtin.file:
+        path: "{{ book_notes_deploy_path }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0750"
+
+    - name: Download the versioned database schema
+      ansible.builtin.get_url:
+        url: >-
+          https://raw.githubusercontent.com/Songhai9/books/v{{ book_notes_version }}/sql/schema.sql
+        dest: "{{ book_notes_deploy_path }}/schema.sql"
+        checksum: "{{ book_notes_schema_checksum }}"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0644"
+
+    - name: Install the private deployment environment
+      ansible.builtin.template:
+        src: templates/book-notes.env.j2
+        dest: "{{ book_notes_deploy_path }}/.env"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0600"
+      no_log: true
+
+    - name: Install the Book Notes Compose definition
+      ansible.builtin.template:
+        src: templates/compose.yml.j2
+        dest: "{{ book_notes_deploy_path }}/compose.yml"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0640"
+
+    - name: Deploy the Book Notes stack
+      ansible.builtin.command:
+        cmd: >-
+          docker compose up
+          --detach
+          --wait
+          --wait-timeout 120
+          --remove-orphans
+          --pull always
+        chdir: "{{ book_notes_deploy_path }}"
+      become: false
+      register: book_notes_compose
+      changed_when: >-
+        'Created' in (book_notes_compose.stdout + book_notes_compose.stderr)
+        or 'Recreated' in (book_notes_compose.stdout + book_notes_compose.stderr)
+        or 'Started' in (book_notes_compose.stdout + book_notes_compose.stderr)
+
+    - name: Verify the application process health
+      ansible.builtin.uri:
+        url: http://127.0.0.1/health
+        status_code: 200
+        return_content: false
+      become: false
+
+    - name: Verify the application and database readiness
+      ansible.builtin.uri:
+        url: http://127.0.0.1/ready
+        status_code: 200
+        return_content: false
+      become: false

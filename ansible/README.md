@@ -23,7 +23,9 @@ inside the instance.
 ansible.cfg                  Local Ansible defaults
 inventory/hosts.ini.example Versioned inventory template
 inventory/generated.ini     Local inventory ignored by Git
-site.yml                     Idempotent Docker configuration
+site.yml                     Docker configuration and Book Notes deployment
+templates/                   Versioned Compose and environment templates
+secrets/                     Local generated secrets ignored by Git
 ```
 
 The generated inventory identifies the host, the remote Ubuntu user, and the
@@ -74,3 +76,27 @@ The playbook follows Docker's official Ubuntu repository installation method:
 Membership in the `docker` group is effectively root-level access because its
 members control the Docker daemon. This lab grants it only to the restricted SSH
 administrator.
+
+## Book Notes deployment
+
+The same playbook deploys `ghcr.io/songhai9/books:1.0.0` and PostgreSQL with
+Docker Compose under `/opt/book-notes`. The database is reachable only through
+the private Compose network; only application port 80 is published on the host.
+
+The PostgreSQL password is generated once on the control node and stored in
+`ansible/secrets/postgres_password`. The file is ignored by Git. Ansible installs
+the value in `/opt/book-notes/.env` with mode `0600` and suppresses task output so
+the secret does not appear in logs.
+
+The SQL schema is downloaded from the matching `v1.0.0` application tag and
+verified against a pinned SHA-256 checksum before Compose can use it.
+
+After deployment, browse to the public EC2 address or verify the endpoints:
+
+```bash
+curl http://51.44.170.23/health
+curl http://51.44.170.23/ready
+```
+
+This is a minimal HTTP lab deployment. TLS and a stable domain name will be
+introduced at the ingress or load-balancer layer later.
