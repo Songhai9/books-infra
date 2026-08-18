@@ -129,6 +129,10 @@ The playbook applies three layers in order:
 The current lab pins Kubernetes `v1.36.3`, cri-tools `v1.36.0`, and Flannel
 `v0.28.8`. The APT packages are held after installation so a routine system
 upgrade cannot change a node independently of the cluster upgrade procedure.
+The control-plane role also installs the checksum-verified Helm `v4.2.4`
+client used by the Kubernetes repository's CD workflow. Git and Helm are
+installed declaratively by Ansible, while application releases remain owned by
+Helm rather than by Ansible.
 
 ### Local inventory
 

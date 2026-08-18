@@ -14,3 +14,6 @@ kubernetes_control_plane_instance_type = "t3.small"
 kubernetes_worker_instance_type        = "t3.small"
 kubernetes_root_volume_size            = 20
 kubernetes_gateway_http_node_port       = 30080
+
+# Immutable OIDC subject for Songhai9/books-k8s main (owner and repository IDs included).
+github_kubernetes_cd_subject = "repo:Songhai9@118692197/books-k8s@1338668243:ref:refs/heads/main"

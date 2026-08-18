@@ -127,6 +127,7 @@ resource "aws_vpc_security_group_egress_rule" "kubernetes_worker_all_ipv4" {
 resource "aws_instance" "kubernetes_control_plane" {
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = var.kubernetes_control_plane_instance_type
+  iam_instance_profile   = aws_iam_instance_profile.kubernetes_control_plane.name
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.kubernetes_control_plane.id]
   key_name               = aws_key_pair.admin.key_name
